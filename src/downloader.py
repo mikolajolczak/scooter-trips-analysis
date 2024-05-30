@@ -1,18 +1,27 @@
 import requests
 import pandas as pd
-
-# URL do pliku CSV
-url = "https://data.cityofchicago.org/api/views/2i5w-ykuw/rows.csv?accessType=DOWNLOAD"
-
-# Pobranie pliku CSV
-response = requests.get(url)
+import zipfile
+import os
+#download trips data
+url_scooter = "https://data.cityofchicago.org/api/views/2i5w-ykuw/rows.csv?accessType=DOWNLOAD"
+response = requests.get(url_scooter)
 open('e_scooter_trips.csv', 'wb').write(response.content)
 
-# Wczytanie danych do Pandas DataFrame
-df = pd.read_csv('e_scooter_trips.csv')
+url_map = "https://mapcruzin.com/download-shapefile/us/illinois_highway.zip"
+zip_filename = "illinois_highway.zip"
+response = requests.get(url_map)
+if response.status_code == 200:
+    with open('illinois_highway.zip', 'wb') as file:
+        file.write(response.content)
+else:
+    print(f"Nie udało się pobrać pliku. Status kod: {response.status_code}")
 
-# Wyświetlenie pierwszych kilku wierszy DataFrame
-print(df.head())
-
-# Zapisanie DataFrame do pliku CSV (opcjonalne)
-df.to_csv('e_scooter_trips_downloaded.csv', index=False)
+with zipfile.ZipFile('illinois_highway.zip', 'r') as zip_ref:
+    zip_ref.extractall('.')
+url_path = os.path.join(directory, "Archive created by free jZip.url")
+zip_path = os.path.join(directory, "illinois_highway.zip")
+readme_path = os.path.join(directory, "readme.txt")
+if os.path.exists('.'):
+    os.remove(url_path)
+    os.remove(zip_path)
+    os.remove(readme_path)
