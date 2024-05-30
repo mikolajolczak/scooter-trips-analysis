@@ -1,0 +1,5 @@
+geopandas >= 0.14.4
+matplotlib >= 3.9.0
+shapely >= 2.0.4
+networkx >= 3.3
+geopy >= 2.4.1
