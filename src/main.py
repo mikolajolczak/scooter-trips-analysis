@@ -23,8 +23,7 @@ def create_graph(df):
     return G
 
 
-def get_shortest_path_lines(df, start_point, end_point):
-    G = create_graph(df)
+def get_shortest_path_lines(df, start_point, end_point, G):
     shortest_path = nx.astar_path(G, start_point, end_point, heuristic=lambda u, v: 0)
 
     # Zamiana punktów na linie
@@ -40,7 +39,7 @@ def get_shortest_path_lines(df, start_point, end_point):
         else:
             print(f"Brak 'line_index' dla krawędzi pomiędzy {shortest_path[i]} i {shortest_path[i + 1]}")
 
-    return shortest_path, line_indices
+    return shortest_path, list(set(line_indices))
 
 
 def remove_elements_by_indexes(lst, indexes):
@@ -65,7 +64,8 @@ def read_trips_file(filename, row_limits=None, start_date=None, end_date=None):
     city_df['count_free'] = 0
     city_df = city_df.cx[-87.89370076 - margin:-87.5349023379022 + margin,
               41.66013746994182 - margin:42.00962338 + margin]
-
+    city_df = city_df.reset_index(drop=True)
+    G = create_graph(city_df)
     if row_limits is None:
         number_of_lines = sum(1 for _ in open(filename))
     else:
@@ -92,30 +92,23 @@ def read_trips_file(filename, row_limits=None, start_date=None, end_date=None):
             end_longitude = float(line[14])
             if start_latitude == end_latitude and start_longitude == end_longitude:
                 continue
-            bigger_latitude = start_latitude if start_latitude >= end_latitude else end_latitude
-            smaller_latitude = start_latitude if start_latitude < end_latitude else end_latitude
-            bigger_longitude = start_longitude if start_longitude >= end_longitude else end_longitude
-            smaller_longitude = start_longitude if start_longitude < end_longitude else end_longitude
-            df_roads_to_search = city_df.cx[smaller_longitude - margin:bigger_longitude + margin,
-                                 smaller_latitude - margin:bigger_latitude + margin]
-            df_roads_to_search = df_roads_to_search.reset_index(drop=True)
             start_point = Point(start_longitude, start_latitude)
             end_point = Point(end_longitude, end_latitude)
-            start_point_closest_line = closest_line(df_roads_to_search['geometry'], start_point)
-            end_point_closest_line = closest_line(df_roads_to_search['geometry'], end_point)
+            start_point_closest_line = closest_line(city_df['geometry'], start_point)
+            end_point_closest_line = closest_line(city_df['geometry'], end_point)
             start_point_closest_line_points_list = list(start_point_closest_line.coords)
             end_point_closest_line_points_list = list(end_point_closest_line.coords)
-            shortest_path, line_indices = get_shortest_path_lines(df_roads_to_search,
+            shortest_path, line_indices = get_shortest_path_lines(city_df,
                                                                   start_point_closest_line_points_list[0],
-                                                                  end_point_closest_line_points_list[0])
+                                                                  end_point_closest_line_points_list[0], G)
             shortest_path_distance = calculate_distance_from_path(shortest_path)
             error = abs(shortest_path_distance - trip_distance) / trip_distance
             if error > 0.1:
                 continue
-            if(start_time.weekday()>=0 and start_time.weekday()<=5):
-                df_roads_to_search.loc[line_indices, 'count_work'] += 1
+            if start_time.weekday() < 5:
+                city_df.loc[line_indices, 'count_work'] += 1
             else:
-                df_roads_to_search.loc[line_indices, 'count_free'] += 1
+                city_df.loc[line_indices, 'count_free'] += 1
 
     city_df.to_file(f"{start_date.strftime('%d-%m-%Y')}_{end_date.strftime('%d-%m-%Y')}.shp")
 
@@ -129,6 +122,6 @@ def filter_roads(df):
 
 
 if __name__ == '__main__':
-    start_date = datetime.strptime("01/02/2023 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime("07/02/2023 23:59:59", "%d/%m/%Y %H:%M:%S")
+    start_date = datetime.strptime("10/05/2022 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date = datetime.strptime("16/05/2022 23:59:59", "%d/%m/%Y %H:%M:%S")
     read_trips_file('e_scooter_trips.csv', start_date=start_date, end_date=end_date)
