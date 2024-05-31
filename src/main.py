@@ -62,6 +62,9 @@ def read_trips_file(filename, row_limits=None, start_date=None, end_date=None):
     city_df = filter_roads(city_df)
     city_df['count_work'] = 0
     city_df['count_free'] = 0
+    city_df['count_lyft'] = 0
+    city_df['count_lime'] = 0
+    city_df['count_link'] = 0
     city_df = city_df.cx[-87.89370076 - margin:-87.5349023379022 + margin,
               41.66013746994182 - margin:42.00962338 + margin]
     city_df = city_df.reset_index(drop=True)
@@ -109,6 +112,12 @@ def read_trips_file(filename, row_limits=None, start_date=None, end_date=None):
                 city_df.loc[line_indices, 'count_work'] += 1
             else:
                 city_df.loc[line_indices, 'count_free'] += 1
+            if vendor == "Lime":
+                city_df.loc[line_indices, 'count_lime'] += 1
+            if vendor == "Lyft":
+                city_df.loc[line_indices, 'count_lyft'] += 1
+            if vendor == "Link":
+                city_df.loc[line_indices, 'count_link'] += 1
 
     city_df.to_file(f"{start_date.strftime('%d-%m-%Y')}_{end_date.strftime('%d-%m-%Y')}.shp")
 
@@ -122,6 +131,6 @@ def filter_roads(df):
 
 
 if __name__ == '__main__':
-    start_date = datetime.strptime("10/05/2022 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime("16/05/2022 23:59:59", "%d/%m/%Y %H:%M:%S")
+    start_date = datetime.strptime("22/05/2023 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date = datetime.strptime("30/05/2023 23:59:59", "%d/%m/%Y %H:%M:%S")
     read_trips_file('e_scooter_trips.csv', start_date=start_date, end_date=end_date)
