@@ -18,9 +18,9 @@ else:
 
 with zipfile.ZipFile('illinois_highway.zip', 'r') as zip_ref:
     zip_ref.extractall('.')
-url_path = os.path.join(directory, "Archive created by free jZip.url")
-zip_path = os.path.join(directory, "illinois_highway.zip")
-readme_path = os.path.join(directory, "readme.txt")
+url_path = os.path.join(".", "Archive created by free jZip.url")
+zip_path = os.path.join(".", "illinois_highway.zip")
+readme_path = os.path.join(".", "readme.txt")
 if os.path.exists('.'):
     os.remove(url_path)
     os.remove(zip_path)
