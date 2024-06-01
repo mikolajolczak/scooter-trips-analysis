@@ -11,7 +11,7 @@ def download_datasets():
     zip_filename = "illinois_highway.zip"
     response = requests.get(url_map)
     if response.status_code == 200:
-        with open('illinois_highway.zip', 'wb') as file:
+        with open(zip_filename, 'wb') as file:
             file.write(response.content)
     else:
         print(f"Nie udało się pobrać pliku. Status kod: {response.status_code}")
