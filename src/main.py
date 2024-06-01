@@ -140,6 +140,6 @@ def filter_roads(df):
 
 
 if __name__ == '__main__':
-    start_date = datetime.strptime("15/04/2023 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime("21/04/2023 23:59:59", "%d/%m/%Y %H:%M:%S")
+    start_date = datetime.strptime("01/04/2023 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date = datetime.strptime("07/04/2023 23:59:59", "%d/%m/%Y %H:%M:%S")
     read_trips_file('e_scooter_trips.csv', start_date=start_date, end_date=end_date)
