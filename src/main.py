@@ -5,6 +5,9 @@ from shapely.geometry import Point, LineString
 import networkx as nx
 from geopy.distance import geodesic
 from tqdm import tqdm
+import os
+import downloader
+
 
 def closest_line(lines, point):
     # get distances
@@ -57,6 +60,12 @@ def calculate_distance_from_path(path):
 
 
 def read_trips_file(filename, row_limits=None, start_date=None, end_date=None):
+    if not (os.path.exists('illinois_highway.shp') and os.path.exists('e_scooter_trips.csv') and
+            os.path.exists('illinois_highway.dbf') and os.path.exists('illinois_highway.prj') and
+            os.path.exists('illinois_highway.shx')):
+        print("Nie znaleziono zbiorów danych. Rozpoczynam pobieranie...")
+        downloader.download_datasets()
+
     margin = 0.1
     city_df = gpd.read_file('illinois_highway.shp')
     city_df = filter_roads(city_df)
@@ -131,6 +140,6 @@ def filter_roads(df):
 
 
 if __name__ == '__main__':
-    start_date = datetime.strptime("22/05/2023 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime("30/05/2023 23:59:59", "%d/%m/%Y %H:%M:%S")
+    start_date = datetime.strptime("15/04/2023 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date = datetime.strptime("21/04/2023 23:59:59", "%d/%m/%Y %H:%M:%S")
     read_trips_file('e_scooter_trips.csv', start_date=start_date, end_date=end_date)
