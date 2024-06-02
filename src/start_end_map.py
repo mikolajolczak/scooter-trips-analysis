@@ -51,7 +51,7 @@ def read_trips_file(filename, start_date=None, end_date=None):
     geometry = [Point(xy) for xy in zip(points_agg['longitude'], points_agg['latitude'])]
     gdf_points = gpd.GeoDataFrame(points_agg, geometry=geometry)
 
-    fig, ax = plt.subplots(1, 1, figsize=(30, 20))
+    fig, ax = plt.subplots(figsize=(12, 12))
     ax.set_ylim(( 41.66013746994182, 42.00962338))
     ax.set_xlim((-87.80370076, -87.5349023379022))
     plt.xticks([])
@@ -59,9 +59,7 @@ def read_trips_file(filename, start_date=None, end_date=None):
     city_df.plot(ax=ax, zorder=1, edgecolor='k')
     gdf_points.plot(ax=ax, zorder=2, color='blue', markersize=gdf_points['counts']*0.3)
 
-    plt.title('Aggregated Trip Points Map')
-    plt.xlabel('Longitude')
-    plt.ylabel('Latitude')
+    plt.title('Mapa zagregowanych punktów podróży')
     plt.savefig(f"{start_date.strftime('%d-%m-%Y')}_{end_date.strftime('%d-%m-%Y')}_points.png", bbox_inches='tight')
 
 if __name__ == '__main__':
