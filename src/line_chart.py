@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 from tqdm import tqdm
-
+import sys
 def read_trips_file(filename, start_date=None, end_date=None):
     margin = 0.1
     lon_min = -87.89370076 - margin
@@ -64,7 +64,7 @@ def read_trips_file(filename, start_date=None, end_date=None):
     plt.grid(True)
     plt.savefig(f"{start_date.strftime('%d-%m-%Y')}_{end_date.strftime('%d-%m-%Y')}_trips_by_hour.png")
 
-if __name__ == '__main__':
-    start_date = datetime.strptime("01/04/2023 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime("07/04/2023 23:59:59", "%d/%m/%Y %H:%M:%S")
-    read_trips_file('e_scooter_trips.csv', start_date=start_date, end_date=end_date)
+def create_line_chart(csv_file, start_day, end_day):
+    start_date = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
+    read_trips_file(csv_file, start_date=start_date, end_date=end_date)

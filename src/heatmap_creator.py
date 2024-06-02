@@ -1,6 +1,6 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
-
+import sys
 
 
 def show_map(geodataframe, column, title="Mapa", is_cut=False):
@@ -22,8 +22,8 @@ def show_map(geodataframe, column, title="Mapa", is_cut=False):
     plt.savefig(f"{column}_cut.png" if is_cut else f"{column}.png", bbox_inches='tight')
 
 
-if __name__ == '__main__':
-    city_df = gpd.read_file('../results/01-04-2023_30-04-2023.shp')
+def create_heat_map(shape_file):
+    city_df = gpd.read_file(shape_file)
     show_map(city_df, 'count_work', "Najczęsciej uczęszczane trasy w dni robocze w okresie 01.04.2023 - 30.04.2023",is_cut=True)
     show_map(city_df, 'count_free', "Najczęsciej uczęszczane trasy w dni wolne w okresie 01.04.2023 - 30.04.2023",is_cut=True)
     show_map(city_df, 'count_lime', "Najczęsciej uczęszczane trasy przy użyciu sprzętu firmy Lime w okresie 01.04.2023 - 30.04.2023",is_cut=True)

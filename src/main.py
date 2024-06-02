@@ -7,8 +7,12 @@ from geopy.distance import geodesic
 from tqdm import tqdm
 import os
 import downloader
-
-
+import sys
+from start_end_map import create_start_end_map
+from trajectory import create_trajectory_map
+from heatmap_creator import create_heat_map
+from line_chart import create_line_chart
+from bar_chart import create_bar_chart
 def closest_line(lines, point):
     # Oblicza odległości między danym punktem a każdą linią z listy 'lines'
     distance_list = [line.distance(point) for line in lines]
@@ -171,6 +175,15 @@ def filter_roads(df):
 
 
 if __name__ == '__main__':
-    start_date = datetime.strptime("01/04/2023 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime("07/04/2023 23:59:59", "%d/%m/%Y %H:%M:%S")
-    read_trips_file('e_scooter_trips.csv', start_date=start_date, end_date=end_date)
+    csv_file = sys.argv[1]
+    start_day = sys.argv[2]
+    end_day = sys.argv[3]
+    result_shapefile_path = f"{start_day.replace('/','-')}_{start_day.replace('/','-')}.shp"
+    start_date = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
+    read_trips_file(csv_file, start_date=start_date, end_date=end_date)
+    create_heat_map(result_shapefile_path)
+    create_bar_chart(csv_file,start_day,end_day)
+    create_line_chart(csv_file, start_day, end_day)
+    create_start_end_map(csv_file, start_day, end_day)
+    create_trajectory_map(csv_file, start_day, end_day, result_shapefile_path)

@@ -48,7 +48,7 @@ def read_trips_file(filename, start_date=None, end_date=None):
     trips_df = pd.DataFrame(trips)
     return trips_df
 
-def create_trajectory_map(trips_df, shapefile_path, start_date, end_date):
+def create_map(trips_df, start_date, end_date, shapefile_path):
     city_gdf = gpd.read_file(shapefile_path)
 
     route_counts = defaultdict(int)
@@ -62,9 +62,9 @@ def create_trajectory_map(trips_df, shapefile_path, start_date, end_date):
     city_gdf.plot(ax=ax, color='lightgrey', edgecolor='black')
     for route, count in route_counts.items():
         line = LineString(route)
-        ax.plot(*line.xy, color='blue', linewidth=0.1 + count * 0.01, alpha=0.7)
+        ax.plot(*line.xy, color='blue', linewidth=0.1 + count * 0.001, alpha=0.7)
 
-    ax.set_ylim(( 41.66013746994182, 42.00962338))
+    ax.set_ylim((41.66013746994182, 42.00962338))
     ax.set_xlim((-87.80370076, -87.5349023379022))
     ax.set_title('Mapa trajektorii przejazdów')
     plt.xticks([])
@@ -72,9 +72,8 @@ def create_trajectory_map(trips_df, shapefile_path, start_date, end_date):
     map_filename = f"{start_date.strftime('%d-%m-%Y')}_{end_date.strftime('%d-%m-%Y')}_trajectory_map.png"
     plt.savefig(map_filename, bbox_inches='tight')
 
-if __name__ == '__main__':
-    start_date = datetime.strptime("01/04/2023 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime("07/04/2023 23:59:59", "%d/%m/%Y %H:%M:%S")
-    trips_df = read_trips_file('e_scooter_trips.csv', start_date=start_date, end_date=end_date)
-    shapefile_path = '../results/01-04-2023_30-04-2023.shp'
-    create_trajectory_map(trips_df, shapefile_path, start_date, end_date)
+def create_trajectory_map(csv_file, start_day, end_day, shapefile_path):
+    start_date = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
+    trips_df = read_trips_file(csv_file, start_date=start_date, end_date=end_date)
+    create_map(trips_df, start_date, end_date, shapefile_path)
