@@ -1,8 +1,14 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
+from typing import Optional
 
-def read_trips_file(csv_file, start_date=None, end_date=None):
+
+def read_trips_file(
+        csv_file: str,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+) -> None:
     """
     Reads a CSV file containing trip data, filters trips by date and geographic boundaries,
     aggregates trips by hour for weekdays and weekends, and generates a line chart.
@@ -29,7 +35,7 @@ def read_trips_file(csv_file, start_date=None, end_date=None):
     lat_max = 42.00962338 + margin
 
     # Load CSV using pandas, parse datetime columns
-    df = pd.read_csv(
+    df: pd.DataFrame = pd.read_csv(
         csv_file,
         usecols=[1, 2, 10, 11, 13, 14],  # Only read necessary columns
         parse_dates=[1, 2],
@@ -44,7 +50,7 @@ def read_trips_file(csv_file, start_date=None, end_date=None):
     df = df[
         (df['start_lon'].between(lon_min, lon_max)) &
         (df['start_lat'].between(lat_min, lat_max))
-    ]
+        ]
 
     # Filter by date range if provided
     if start_date:
@@ -58,8 +64,8 @@ def read_trips_file(csv_file, start_date=None, end_date=None):
     df['is_weekend'] = df['weekday'] >= 5
 
     # Aggregate trips by hour for weekdays and weekends
-    weekday_trips = df[~df['is_weekend']].groupby('hour').size()
-    weekend_trips = df[df['is_weekend']].groupby('hour').size()
+    weekday_trips: pd.Series = df[~df['is_weekend']].groupby('hour').size()
+    weekend_trips: pd.Series = df[df['is_weekend']].groupby('hour').size()
 
     # Plot line chart
     plt.figure(figsize=(12, 6))
@@ -70,10 +76,19 @@ def read_trips_file(csv_file, start_date=None, end_date=None):
     plt.title('Number of Trips by Hour for Weekdays and Weekends')
     plt.legend()
     plt.grid(True)
-    plt.savefig(f"{start_date.strftime('%d-%m-%Y')}_{end_date.strftime('%d-%m-%Y')}_trips_by_hour.png")
+
+    # Handle case when start_date or end_date is None
+    filename = "trips_by_hour.png"
+    if start_date and end_date:
+        filename = f"{start_date.strftime('%d-%m-%Y')}_{end_date.strftime('%d-%m-%Y')}_trips_by_hour.png"
+    plt.savefig(filename)
 
 
-def create_line_chart(csv_file, start_day, end_day):
+def create_line_chart(
+        csv_file: str,
+        start_day: str,
+        end_day: str
+) -> None:
     """
     Wrapper function to convert date strings to datetime objects and generate
     a line chart of trips by hour.
@@ -91,6 +106,6 @@ def create_line_chart(csv_file, start_day, end_day):
     -------
     None
     """
-    start_date = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
+    start_date: datetime = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date: datetime = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
     read_trips_file(csv_file, start_date=start_date, end_date=end_date)
