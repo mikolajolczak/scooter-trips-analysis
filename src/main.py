@@ -6,6 +6,7 @@ from geopy.distance import geodesic
 from tqdm import tqdm
 import os
 import sys
+from typing import List, Tuple, Optional
 
 import downloader
 from start_end_map import create_start_end_map
@@ -15,7 +16,7 @@ from line_chart import create_line_chart
 from bar_chart import create_bar_chart
 
 
-def closest_line(lines, point):
+def closest_line(lines: List[LineString], point: Point) -> LineString:
     """
     Finds the closest line from a list of lines to a given point.
 
@@ -31,12 +32,12 @@ def closest_line(lines, point):
     shapely LineString
         The line closest to the given point.
     """
-    distances = [line.distance(point) for line in lines]
-    shortest_distance = min(distances)
+    distances: List[float] = [line.distance(point) for line in lines]
+    shortest_distance: float = min(distances)
     return lines[distances.index(shortest_distance)]
 
 
-def create_graph(df):
+def create_graph(df: gpd.GeoDataFrame) -> nx.Graph:
     """
     Creates a NetworkX graph from a GeoDataFrame of line geometries.
 
@@ -50,16 +51,16 @@ def create_graph(df):
     networkx.Graph
         A graph where nodes are coordinates and edges represent line segments.
     """
-    g = nx.Graph()
+    g: nx.Graph = nx.Graph()
     for idx, row in df.iterrows():
-        line = row['geometry']
-        nodes = list(line.coords)
+        line: LineString = row['geometry']
+        nodes: List[Tuple[float, float]] = list(line.coords)
         for i in range(len(nodes) - 1):
             g.add_edge(nodes[i], nodes[i + 1], weight=line.length, line=line, line_index=idx)
     return g
 
 
-def get_shortest_path_lines(start_point, end_point, g):
+def get_shortest_path_lines(start_point: Tuple[float, float], end_point: Tuple[float, float], g: nx.Graph) -> Tuple[List[Tuple[float, float]], List[int]]:
     """
     Finds the shortest path in a graph between two points and returns the corresponding lines.
 
@@ -79,12 +80,12 @@ def get_shortest_path_lines(start_point, end_point, g):
     line_indices : list of int
         Indices of the lines in the GeoDataFrame that correspond to the path.
     """
-    shortest_path = nx.astar_path(g, start_point, end_point, heuristic=lambda u, v: 0)
-    path_lines = []
-    line_indices = []
+    shortest_path: List[Tuple[float, float]] = nx.astar_path(g, start_point, end_point, heuristic=lambda u, v: 0)
+    path_lines: List[LineString] = []
+    line_indices: List[int] = []
 
     for i in range(len(shortest_path) - 1):
-        edge_data = g.get_edge_data(shortest_path[i], shortest_path[i + 1])
+        edge_data: dict = g.get_edge_data(shortest_path[i], shortest_path[i + 1])
         if 'line_index' in edge_data:
             path_lines.append(edge_data['line'])
             line_indices.append(edge_data['line_index'])
@@ -94,7 +95,7 @@ def get_shortest_path_lines(start_point, end_point, g):
     return shortest_path, list(set(line_indices))
 
 
-def remove_elements_by_indexes(lst, indexes):
+def remove_elements_by_indexes(lst: List, indexes: List[int]) -> List:
     """
     Removes elements from a list by their indexes.
 
@@ -114,7 +115,7 @@ def remove_elements_by_indexes(lst, indexes):
     return [elem for i, elem in enumerate(lst) if i not in indexes]
 
 
-def calculate_distance_from_path(path):
+def calculate_distance_from_path(path: List[Tuple[float, float]]) -> float:
     """
     Calculates the geodesic distance of a path defined by a list of coordinates.
 
@@ -130,13 +131,13 @@ def calculate_distance_from_path(path):
     """
     if len(path) <= 1:
         return 0
-    distances = [geodesic(path[i], path[i + 1]).meters for i in range(len(path) - 1)]
+    distances: List[float] = [geodesic(path[i], path[i + 1]).meters for i in range(len(path) - 1)]
     # Create a LineString representing cumulative distance (optional)
-    linestring = LineString([(0, 0)] + [(sum(distances[:i + 1]), 0) for i in range(len(distances))])
+    linestring: LineString = LineString([(0, 0)] + [(sum(distances[:i + 1]), 0) for i in range(len(distances))])
     return linestring.length
 
 
-def filter_roads(df):
+def filter_roads(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Filters a GeoDataFrame of roads, keeping only specific road types.
 
@@ -150,7 +151,7 @@ def filter_roads(df):
     geopandas.GeoDataFrame
         Filtered GeoDataFrame containing only selected road types.
     """
-    valid_types = [
+    valid_types: List[str] = [
         'living_street', 'service', 'track', 'crossing', 'cycleway', 'residential',
         'pedestrian', 'footway', 'sidewalk', 'walkway', 'park road', 'cycleway;footway',
         'cycleway; footway', 'cycleway; footway; footway; footway', 'cycleway; footway; footway',
@@ -159,9 +160,9 @@ def filter_roads(df):
     return df[df['TYPE'].isin(valid_types)]
 
 
-def read_trips_file(filename, row_limits=None, start=None, end=None):
+def read_trips_file(filename: str, row_limits: Optional[int] = None, start: Optional[datetime] = None, end: Optional[datetime] = None) -> None:
     """
-    Reads trip data, filters by date and location, maps trips to road network, 
+    Reads trip data, filters by date and location, maps trips to road network,
     counts trips by type and vendor, and saves results as a shapefile.
 
     Parameters
@@ -181,34 +182,34 @@ def read_trips_file(filename, row_limits=None, start=None, end=None):
         Saves the updated GeoDataFrame with trip counts as a shapefile.
     """
     # Download datasets if missing
-    required_files = ['illinois_highway.shp', 'illinois_highway.dbf', 'illinois_highway.prj',
-                      'illinois_highway.shx', 'e_scooter_trips.csv']
+    required_files: List[str] = ['illinois_highway.shp', 'illinois_highway.dbf', 'illinois_highway.prj',
+                                 'illinois_highway.shx', 'e_scooter_trips.csv']
     if not all(os.path.exists(f) for f in required_files):
         print("Datasets not found. Downloading...")
         downloader.download_datasets()
 
     # Load and filter roads
-    margin = 0.1
-    city_df = gpd.read_file('illinois_highway.shp')
+    margin: float = 0.1
+    city_df: gpd.GeoDataFrame = gpd.read_file('illinois_highway.shp')
     city_df = filter_roads(city_df)
     city_df[['count_work', 'count_free', 'count_lyft', 'count_lime', 'count_link']] = 0
     city_df = city_df.cx[-87.89370076 - margin:-87.5349023379022 + margin,
                          41.66013746994182 - margin:42.00962338 + margin].reset_index(drop=True)
 
-    g = create_graph(city_df)
+    g: nx.Graph = create_graph(city_df)
 
     # Determine number of lines to process
-    number_of_lines = row_limits or sum(1 for _ in open(filename))
+    number_of_lines: int = row_limits or sum(1 for _ in open(filename))
 
     with open(filename, 'r') as file:
         file.readline()  # skip header
         for _ in tqdm(range(number_of_lines - 1)):
-            line = list(file.readline().split(','))
+            line: List[str] = list(file.readline().split(','))
 
             # Parse times and skip invalid
             try:
-                start_time = datetime.strptime(line[1], "%m/%d/%Y %I:%M:%S %p")
-                end_time = datetime.strptime(line[2], "%m/%d/%Y %I:%M:%S %p")
+                start_time: datetime = datetime.strptime(line[1], "%m/%d/%Y %I:%M:%S %p")
+                end_time: datetime = datetime.strptime(line[2], "%m/%d/%Y %I:%M:%S %p")
             except ValueError:
                 continue
 
@@ -216,30 +217,34 @@ def read_trips_file(filename, row_limits=None, start=None, end=None):
             if not start <= start_time <= end and not start <= end_time <= end:
                 continue
 
-            trip_distance = float(line[3])
-            vendor = line[5]
+            trip_distance: float = float(line[3])
+            vendor: str = line[5]
 
             # Skip trips with missing coordinates
             if line[10] == '' or line[11] == '' or line[13] == '' or line[14] == '':
                 continue
 
-            start_lat, start_lon = float(line[10]), float(line[11])
-            end_lat, end_lon = float(line[13]), float(line[14])
+            start_lat: float = float(line[10])
+            start_lon: float = float(line[11])
+            end_lat: float = float(line[13])
+            end_lon: float = float(line[14])
 
             if start_lat == end_lat and start_lon == end_lon:
                 continue
 
-            start_point = Point(start_lon, start_lat)
-            end_point = Point(end_lon, end_lat)
+            start_point: Point = Point(start_lon, start_lat)
+            end_point: Point = Point(end_lon, end_lat)
 
-            start_line = closest_line(city_df['geometry'], start_point)
-            end_line = closest_line(city_df['geometry'], end_point)
+            start_line: LineString = closest_line(city_df['geometry'], start_point)
+            end_line: LineString = closest_line(city_df['geometry'], end_point)
 
-            start_points = list(start_line.coords)
-            end_points = list(end_line.coords)
+            start_points: List[Tuple[float, float]] = list(start_line.coords)
+            end_points: List[Tuple[float, float]] = list(end_line.coords)
 
+            shortest_path: List[Tuple[float, float]]
+            line_indices: List[int]
             shortest_path, line_indices = get_shortest_path_lines(start_points[0], end_points[0], g)
-            shortest_path_distance = calculate_distance_from_path(shortest_path)
+            shortest_path_distance: float = calculate_distance_from_path(shortest_path)
 
             # Skip if distance error > 10%
             if abs(shortest_path_distance - trip_distance) / trip_distance > 0.1:
@@ -264,13 +269,13 @@ def read_trips_file(filename, row_limits=None, start=None, end=None):
 
 
 if __name__ == '__main__':
-    csv_file = sys.argv[1]
-    start_day = sys.argv[2]
-    end_day = sys.argv[3]
+    csv_file: str = sys.argv[1]
+    start_day: str = sys.argv[2]
+    end_day: str = sys.argv[3]
 
-    result_shapefile_path = f"{start_day.replace('/', '-')}_{end_day.replace('/', '-')}.shp"
-    start_date = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
+    result_shapefile_path: str = f"{start_day.replace('/', '-')}_{end_day.replace('/', '-')}.shp"
+    start_date: datetime = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date: datetime = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
 
     # Process trips and generate shapefile
     read_trips_file(csv_file, start=start_date, end=end_date)
