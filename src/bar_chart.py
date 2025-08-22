@@ -2,10 +2,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
-from tqdm import tqdm
 import os
+from typing import Optional
 
-def read_trips_file(filename, start_date=None, end_date=None):
+def read_trips_file(
+    filename: str,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+) -> None:
     """
     Reads a CSV file containing trip data, filters trips by date and location,
     calculates average trip duration for weekdays and weekends, and generates a bar plot.
@@ -18,75 +22,55 @@ def read_trips_file(filename, start_date=None, end_date=None):
         Start of the date range for filtering trips (default is earliest possible date).
     end_date : datetime, optional
         End of the date range for filtering trips (default is latest possible date).
-
-    Returns
-    -------
-    None
-        Saves a bar plot of average trip duration in the 'plots' folder.
-        Prints a message if no trips are found in the specified date range.
     """
+    # Default dates
     if start_date is None:
         start_date = datetime.min
     if end_date is None:
         end_date = datetime.max
 
-    # Geographic bounds for filtering trips (Chicago + margin)
+    # Geographic bounds (Chicago + margin)
     margin = 0.1
     lon_min = -87.89370076 - margin
     lon_max = -87.5349023379022 + margin
     lat_min = 41.66013746994182 - margin
     lat_max = 42.00962338 + margin
 
-    trips = []
+    # Read CSV
+    try:
+        trips_df: pd.DataFrame = pd.read_csv(filename, parse_dates=['start_time', 'end_time'])
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return
 
-    with open(filename, 'r') as file:
-        file.readline()  # skip header
-        for line in tqdm(file):
-            fields = line.strip().split(',')
-
-            # Parse start and end times, skip rows with invalid format
-            try:
-                start_time = datetime.strptime(fields[1], "%m/%d/%Y %I:%M:%S %p")
-                end_time = datetime.strptime(fields[2], "%m/%d/%Y %I:%M:%S %p")
-            except ValueError:
-                continue
-
-            # Filter trips outside the specified date range
-            if not (start_date <= start_time <= end_date or start_date <= end_time <= end_date):
-                continue
-
-            # Skip rows with missing coordinates
-            if not all(fields[i] for i in [10, 11, 13, 14]):
-                continue
-
-            start_latitude = float(fields[10])
-            start_longitude = float(fields[11])
-
-            # Filter trips outside the geographic bounds
-            if not (lon_min <= start_longitude <= lon_max and lat_min <= start_latitude <= lat_max):
-                continue
-
-            # Append trip info
-            trip = {
-                'start_time': start_time,
-                'end_time': end_time,
-                'duration': (end_time - start_time).total_seconds() / 60,  # duration in minutes
-                'weekday': start_time.weekday(),  # Monday=0, Sunday=6
-            }
-            trips.append(trip)
-
-    # Convert to DataFrame
-    trips_df = pd.DataFrame(trips)
+    # Filter by date range (keep trips fully within the range)
+    trips_df = trips_df[
+        (trips_df['start_time'] >= start_date) & (trips_df['end_time'] <= end_date)
+    ]
 
     if trips_df.empty:
         print("No trips found in the specified date range.")
         return
 
+    # Drop rows with missing coordinates
+    trips_df = trips_df.dropna(subset=['start_latitude', 'start_longitude'])
+
+    # Filter by geographic bounds
+    trips_df = trips_df[
+        trips_df['start_longitude'].between(lon_min, lon_max) &
+        trips_df['start_latitude'].between(lat_min, lat_max)
+    ]
+
+    # Calculate trip duration in minutes and remove negative durations
+    trips_df['duration'] = (trips_df['end_time'] - trips_df['start_time']).dt.total_seconds() / 60
+    trips_df = trips_df[trips_df['duration'] >= 0]
+
     # Flag weekends
+    trips_df['weekday'] = trips_df['start_time'].dt.weekday
     trips_df['is_weekend'] = trips_df['weekday'] >= 5
 
     # Calculate average duration for weekdays vs weekends
-    avg_duration = trips_df.groupby('is_weekend')['duration'].mean().reset_index()
+    avg_duration: pd.DataFrame = trips_df.groupby('is_weekend')['duration'].mean().reset_index()
     avg_duration['is_weekend'] = avg_duration['is_weekend'].map({True: 'Weekend', False: 'Weekday'})
 
     # Ensure the "plots" folder exists
@@ -102,7 +86,11 @@ def read_trips_file(filename, start_date=None, end_date=None):
     plt.close()
 
 
-def create_bar_chart(csv_file, start_day, end_day):
+def create_bar_chart(
+    csv_file: str,
+    start_day: str,
+    end_day: str
+) -> None:
     """
     Wrapper function to convert date strings to datetime objects
     and generate the average trip duration bar chart.
@@ -115,14 +103,7 @@ def create_bar_chart(csv_file, start_day, end_day):
         Start date in format 'dd/mm/yyyy'.
     end_day : str
         End date in format 'dd/mm/yyyy'.
-
-    Returns
-    -------
-    None
-        Calls read_trips_file to process the data and generate the plot.
     """
-    # Convert date strings to datetime objects
-    start_date = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
-    # Read trips and generate the chart
+    start_date: datetime = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date: datetime = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
     read_trips_file(csv_file, start_date=start_date, end_date=end_date)
