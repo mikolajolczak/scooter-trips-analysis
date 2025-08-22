@@ -1,7 +1,13 @@
 import geopandas as gpd
 import matplotlib.pyplot as plt
 
-def show_map(geodataframe, column, title="Map", is_cut=False):
+
+def show_map(
+    geodataframe: gpd.GeoDataFrame,
+    column: str,
+    title: str = "Map",
+    is_cut: bool = False
+) -> None:
     """
     Plots a GeoDataFrame as a choropleth map with variable line widths
     depending on the column values and saves it as a PNG file.
@@ -26,7 +32,7 @@ def show_map(geodataframe, column, title="Map", is_cut=False):
     fig, ax = plt.subplots(1, 1, figsize=(30, 20))
 
     # Define line width based on column value
-    def get_linewidth(value):
+    def get_linewidth(value: float) -> float:
         return 2 if value > 0 else 0.5
     linewidths = geodataframe[column].apply(get_linewidth)
 
@@ -50,7 +56,7 @@ def show_map(geodataframe, column, title="Map", is_cut=False):
     plt.savefig(f"{column}_cut.png" if is_cut else f"{column}.png", bbox_inches='tight')
 
 
-def create_heat_map(shape_file):
+def create_heat_map(shape_file: str) -> None:
     """
     Generates multiple heat maps from a shapefile showing the most
     frequently traveled routes for weekdays, weekends, and by scooter companies.
@@ -66,7 +72,7 @@ def create_heat_map(shape_file):
         Calls show_map multiple times and saves PNG maps.
     """
     # Load shapefile into a GeoDataFrame
-    city_df = gpd.read_file(shape_file)
+    city_df: gpd.GeoDataFrame = gpd.read_file(shape_file)
 
     # Zoomed-in maps (cut) for different trip categories
     show_map(city_df, 'count_work', "Most frequent routes on weekdays (01.04.2023 - 30.04.2023)", is_cut=True)
