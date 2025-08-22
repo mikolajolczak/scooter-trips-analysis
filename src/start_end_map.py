@@ -4,8 +4,9 @@ from shapely.geometry import Point
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pandas as pd
+from typing import Optional
 
-def read_trips_file(filename, start_date=None, end_date=None):
+def read_trips_file(filename: str, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> None:
     """
     Reads a CSV file containing trip data, aggregates start and end points,
     and plots them on a map using a shapefile of the city roads as a base.
@@ -25,28 +26,28 @@ def read_trips_file(filename, start_date=None, end_date=None):
         Saves a PNG file with aggregated trip points plotted on the city map.
     """
     # Define geographic boundaries (Chicago area) with a margin
-    margin = 0.1
-    lon_min = -87.89370076 - margin
-    lon_max = -87.5349023379022 + margin
-    lat_min = 41.66013746994182 - margin
-    lat_max = 42.00962338 + margin
+    margin: float = 0.1
+    lon_min: float = -87.89370076 - margin
+    lon_max: float = -87.5349023379022 + margin
+    lat_min: float = 41.66013746994182 - margin
+    lat_max: float = 42.00962338 + margin
 
     # Load city roads shapefile
-    city_df = gpd.read_file('../results/01-04-2023_30-04-2023.shp')
+    city_df: gpd.GeoDataFrame = gpd.read_file('../results/01-04-2023_30-04-2023.shp')
 
-    points = []
+    points: list[tuple[float, float]] = []
 
     # Count total lines for progress bar
-    number_of_lines = sum(1 for _ in open(filename))
+    number_of_lines: int = sum(1 for _ in open(filename))
     with open(filename, 'r') as file:
         file.readline()  # skip header
         for _ in tqdm(range(number_of_lines - 1)):
-            line = list(file.readline().split(','))
+            line: list[str] = list(file.readline().split(','))
 
             # Parse trip start and end times
             try:
-                start_time = datetime.strptime(line[1], "%m/%d/%Y %I:%M:%S %p")
-                end_time = datetime.strptime(line[2], "%m/%d/%Y %I:%M:%S %p")
+                start_time: datetime = datetime.strptime(line[1], "%m/%d/%Y %I:%M:%S %p")
+                end_time: datetime = datetime.strptime(line[2], "%m/%d/%Y %I:%M:%S %p")
             except ValueError:
                 continue  # skip rows with invalid datetime
 
@@ -59,10 +60,10 @@ def read_trips_file(filename, start_date=None, end_date=None):
                 continue
 
             # Parse coordinates
-            start_latitude = float(line[10])
-            start_longitude = float(line[11])
-            end_latitude = float(line[13])
-            end_longitude = float(line[14])
+            start_latitude: float = float(line[10])
+            start_longitude: float = float(line[11])
+            end_latitude: float = float(line[13])
+            end_longitude: float = float(line[14])
 
             # Filter points within geographic boundaries
             if lon_min <= start_longitude <= lon_max and lat_min <= start_latitude <= lat_max:
@@ -71,12 +72,12 @@ def read_trips_file(filename, start_date=None, end_date=None):
                 points.append((end_longitude, end_latitude))
 
     # Aggregate points by location
-    points_df = pd.DataFrame(points, columns=['longitude', 'latitude'])
-    points_agg = points_df.groupby(['longitude', 'latitude']).size().reset_index(name='counts')
+    points_df: pd.DataFrame = pd.DataFrame(points, columns=['longitude', 'latitude'])
+    points_agg: pd.DataFrame = points_df.groupby(['longitude', 'latitude']).size().reset_index(name='counts')
 
     # Create GeoDataFrame for plotting
-    geometry = [Point(xy) for xy in zip(points_agg['longitude'], points_agg['latitude'])]
-    gdf_points = gpd.GeoDataFrame(points_agg, geometry=geometry)
+    geometry: list[Point] = [Point(xy) for xy in zip(points_agg['longitude'], points_agg['latitude'])]
+    gdf_points: gpd.GeoDataFrame = gpd.GeoDataFrame(points_agg, geometry=geometry)
 
     # Plot city map and aggregated points
     fig, ax = plt.subplots(figsize=(12, 12))
@@ -92,7 +93,7 @@ def read_trips_file(filename, start_date=None, end_date=None):
                 bbox_inches='tight')
 
 
-def create_start_end_map(csv_file, start_day, end_day):
+def create_start_end_map(csv_file: str, start_day: str, end_day: str) -> None:
     """
     Wrapper function to convert date strings to datetime objects
     and generate an aggregated start/end point map.
@@ -111,6 +112,6 @@ def create_start_end_map(csv_file, start_day, end_day):
     None
         Calls read_trips_file to process trips and generate the map.
     """
-    start_date = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
-    end_date = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
+    start_date: datetime = datetime.strptime(f"{start_day} 00:00:00", "%d/%m/%Y %H:%M:%S")
+    end_date: datetime = datetime.strptime(f"{end_day} 23:59:59", "%d/%m/%Y %H:%M:%S")
     read_trips_file(csv_file, start_date=start_date, end_date=end_date)
